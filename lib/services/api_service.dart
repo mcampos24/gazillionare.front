@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/inversion.dart';
 
 class ApiService {
-  final String baseUrl = "http://10.0.2.2:8080/api/portafolio";
+  final String baseUrl = "http://192.168.1.1:8080/api/portafolio";
 
   Future<List<Inversion>> getInversiones() async {
     final res = await http.get(Uri.parse(baseUrl));
