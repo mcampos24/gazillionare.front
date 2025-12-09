@@ -7,14 +7,13 @@ class Accion extends Inversion {
   final double bvps;
 
   Accion({
-    required String nombre,
+    required super.nombre,
     required this.cantidad,
     required this.precioActual,
     required this.eps,
     required this.bvps,
   }) : super(
     tipo: 'ACCION',
-    nombre: nombre,
     monto: (cantidad * precioActual).toDouble(),
   );
 

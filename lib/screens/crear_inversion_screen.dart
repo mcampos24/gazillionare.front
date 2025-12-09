@@ -1,16 +1,16 @@
-// lib/screens/crear_inversion_screen.dart
-
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 import '../models/accion.dart';
 import '../models/bono.dart';
 import '../models/fondo.dart';
 import '../models/inversion.dart';
 
-
 class CrearInversionScreen extends StatefulWidget {
+  const CrearInversionScreen({super.key});
+
   @override
-  _CrearInversionScreenState createState() => _CrearInversionScreenState();
+  State<CrearInversionScreen> createState() => _CrearInversionScreenState();
 }
 
 class _CrearInversionScreenState extends State<CrearInversionScreen> {
@@ -40,7 +40,6 @@ class _CrearInversionScreenState extends State<CrearInversionScreen> {
     _nombre = '';
     _monto = 0.0;
 
-    // Inicializar valores por defecto
     _cantidad = 1;
     _precioActual = 0.0;
     _eps = 0.0;
@@ -53,226 +52,329 @@ class _CrearInversionScreenState extends State<CrearInversionScreen> {
     _rendimientoAnual = 0.0;
   }
 
-  void _guardar() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
+  Future<void> _guardar() async {
+    if (!_formKey.currentState!.validate()) return;
+    _formKey.currentState!.save();
 
-      try {
-        Inversion nuevaInversion;
+    try {
+      Inversion nuevaInversion;
 
-        switch (_tipoSeleccionado) {
-          case 'ACCION':
-            nuevaInversion = Accion(
-              nombre: _nombre,
-              cantidad: _cantidad,
-              precioActual: _precioActual,
-              eps: _eps,
-              bvps: _bvps,
-            );
-            break;
-          case 'BONO':
-            nuevaInversion = Bono(
-              nombre: _nombre,
-              monto: _monto,
-              retornoAnual: _retornoAnual,
-              aniosRestantes: _aniosRestantes,
-            );
-            break;
-          case 'FONDO':
-            nuevaInversion = Fondo(
-              nombre: _nombre,
-              monto: _monto,
-              tipoFondo: _tipoFondo,
-              rendimientoAnual: _rendimientoAnual,
-            );
-            break;
-          default:
-            throw Exception('Tipo no soportado');
-        }
-
-        await ApiService().crearInversion(nuevaInversion);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Inversión creada con éxito')),
-        );
-        Navigator.pop(context); // Volver a la pantalla anterior
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+      switch (_tipoSeleccionado) {
+        case 'ACCION':
+          nuevaInversion = Accion(
+            nombre: _nombre,
+            cantidad: _cantidad,
+            precioActual: _precioActual,
+            eps: _eps,
+            bvps: _bvps,
+          );
+          break;
+        case 'BONO':
+          nuevaInversion = Bono(
+            nombre: _nombre,
+            monto: _monto,
+            retornoAnual: _retornoAnual,
+            aniosRestantes: _aniosRestantes,
+          );
+          break;
+        case 'FONDO':
+          nuevaInversion = Fondo(
+            nombre: _nombre,
+            monto: _monto,
+            tipoFondo: _tipoFondo,
+            rendimientoAnual: _rendimientoAnual,
+          );
+          break;
+        default:
+          throw Exception('Tipo no soportado');
       }
+
+      await ApiService().crearInversion(nuevaInversion);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inversión creada con éxito')),
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Nueva Inversión')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              // Selector de tipo
-              DropdownButtonFormField<String>(
-                decoration: InputDecoration(labelText: 'Tipo de inversión'),
-                value: _tipoSeleccionado,
-                items: [
-                  DropdownMenuItem(value: 'ACCION', child: Text('Acción')),
-                  DropdownMenuItem(value: 'BONO', child: Text('Bono')),
-                  DropdownMenuItem(value: 'FONDO', child: Text('Fondo')),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _tipoSeleccionado = value!;
-                  });
-                },
-                validator: (value) => value == null ? 'Seleccione un tipo' : null,
-              ),
-
-              // Nombre (común a todos)
-              TextFormField(
-                decoration: InputDecoration(labelText: 'Nombre'),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'El nombre es obligatorio';
-                  }
-                  return null;
-                },
-                onSaved: (value) => _nombre = value!.trim(),
-              ),
-
-              // Campos según tipo
-              if (_tipoSeleccionado == 'ACCION') ...[
-                TextFormField(
-                  decoration: InputDecoration(labelText: 'Cantidad'),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || int.tryParse(value) == null || int.parse(value) <= 0) {
-                      return 'Ingrese una cantidad válida (> 0)';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) => _cantidad = int.parse(value!),
-                ),
-                TextFormField(
-                  decoration: InputDecoration(labelText: 'Precio actual'),
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  validator: (value) {
-                    final num = double.tryParse(value!);
-                    if (num == null || num <= 0) {
-                      return 'Precio debe ser > 0';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) => _precioActual = double.parse(value!),
-                ),
-                TextFormField(
-                  decoration: InputDecoration(labelText: 'EPS'),
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  validator: (value) {
-                    final num = double.tryParse(value!);
-                    if (num == null || num <= 0) {
-                      return 'EPS debe ser > 0';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) => _eps = double.parse(value!),
-                ),
-                TextFormField(
-                  decoration: InputDecoration(labelText: 'BVPS'),
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  validator: (value) {
-                    final num = double.tryParse(value!);
-                    if (num == null || num <= 0) {
-                      return 'BVPS debe ser > 0';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) => _bvps = double.parse(value!),
-                ),
-              ] else if (_tipoSeleccionado == 'BONO') ...[
-                TextFormField(
-                  decoration: InputDecoration(labelText: 'Monto invertido'),
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  validator: (value) {
-                    final num = double.tryParse(value!);
-                    if (num == null || num <= 0) {
-                      return 'Monto debe ser > 0';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) => _monto = double.parse(value!),
-                ),
-                TextFormField(
-                  decoration: InputDecoration(labelText: 'Retorno anual (%)'),
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  validator: (value) {
-                    final num = double.tryParse(value!);
-                    if (num == null || num <= 0) {
-                      return 'Retorno debe ser > 0';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) => _retornoAnual = double.parse(value!),
-                ),
-                TextFormField(
-                  decoration: InputDecoration(labelText: 'Años restantes'),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || int.tryParse(value) == null || int.parse(value) <= 0) {
-                      return 'Años deben ser > 0';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) => _aniosRestantes = int.parse(value!),
-                ),
-              ] else if (_tipoSeleccionado == 'FONDO') ...[
-                TextFormField(
-                  decoration: InputDecoration(labelText: 'Monto invertido'),
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  validator: (value) {
-                    final num = double.tryParse(value!);
-                    if (num == null || num <= 0) {
-                      return 'Monto debe ser > 0';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) => _monto = double.parse(value!),
-                ),
-                TextFormField(
-                  decoration: InputDecoration(labelText: 'Tipo de fondo'),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Ingrese el tipo de fondo';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) => _tipoFondo = value!.trim(),
-                ),
-                TextFormField(
-                  decoration: InputDecoration(labelText: 'Rendimiento anual (%)'),
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  validator: (value) {
-                    final num = double.tryParse(value!);
-                    if (num == null || num < 0) {
-                      return 'Rendimiento no puede ser negativo';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) => _rendimientoAnual = double.parse(value!),
-                ),
-              ],
-
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _guardar,
-                child: Text('Guardar Inversión'),
-                style: ElevatedButton.styleFrom(minimumSize: Size(double.infinity, 48)),
-              ),
-            ],
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('lib/assets/fondo.png'),
+            fit: BoxFit.cover,
           ),
         ),
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: Padding(
+              padding: const EdgeInsets.only(top: 10.0),
+              child: Text(
+                'Añade...',
+                style: GoogleFonts.pixelifySans(
+                  fontSize: 55,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal[900],
+                  shadows: const [
+                    Shadow(
+                      offset: Offset(1, 1),
+                      blurRadius: 4,
+                      color: Colors.black54,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            centerTitle: true,
+            toolbarHeight: 100,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            foregroundColor: Colors.white,
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  children: [
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: 'Tipo de inversión',
+                        labelStyle: GoogleFonts.pixelifySans(color: Colors.teal[900]),
+                        border: const OutlineInputBorder(),
+                      ),
+                      dropdownColor: Colors.white,
+                      style: GoogleFonts.pixelifySans(color: Colors.teal[900]),
+                      value: _tipoSeleccionado,
+                      items: const [
+                        DropdownMenuItem(value: 'ACCION', child: Text('Acción')),
+                        DropdownMenuItem(value: 'BONO', child: Text('Bono')),
+                        DropdownMenuItem(value: 'FONDO', child: Text('Fondo')),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _tipoSeleccionado = value!;
+                        });
+                      },
+                      validator: (value) => value == null ? 'Seleccione un tipo' : null,
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Nombre
+                    TextFormField(
+                      decoration: InputDecoration(
+                        labelText: 'Nombre',
+                        labelStyle: GoogleFonts.pixelifySans(color: Colors.teal[900]),
+                        border: const OutlineInputBorder(),
+                      ),
+                      style: GoogleFonts.pixelifySans(color: Colors.teal[900]),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'El nombre es obligatorio';
+                        }
+                        return null;
+                      },
+                      onSaved: (value) => _nombre = value?.trim() ?? '',
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Acción
+                    if (_tipoSeleccionado == 'ACCION') ...[
+                      _buildTextFormField(
+                        labelText: 'Cantidad',
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null) return 'Ingrese una cantidad válida (> 0)';
+                          final parsed = int.tryParse(value);
+                          return (parsed == null || parsed <= 0)
+                              ? 'Ingrese una cantidad válida (> 0)'
+                              : null;
+                        },
+                        onSaved: (value) => _cantidad = int.parse(value ?? '1'),
+                      ),
+                      _buildTextFormField(
+                        labelText: 'Precio actual',
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (value) {
+                          if (value == null) return 'Precio debe ser > 0';
+                          final num = double.tryParse(value);
+                          return (num == null || num <= 0)
+                              ? 'Precio debe ser > 0'
+                              : null;
+                        },
+                        onSaved: (value) => _precioActual = double.parse(value ?? '0.01'),
+                      ),
+                      _buildTextFormField(
+                        labelText: 'EPS',
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (value) {
+                          if (value == null) return 'EPS debe ser > 0';
+                          final num = double.tryParse(value);
+                          return (num == null || num <= 0)
+                              ? 'EPS debe ser > 0'
+                              : null;
+                        },
+                        onSaved: (value) => _eps = double.parse(value ?? '0.01'),
+                      ),
+                      _buildTextFormField(
+                        labelText: 'BVPS',
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (value) {
+                          if (value == null) return 'BVPS debe ser > 0';
+                          final num = double.tryParse(value);
+                          return (num == null || num <= 0)
+                              ? 'BVPS debe ser > 0'
+                              : null;
+                        },
+                        onSaved: (value) => _bvps = double.parse(value ?? '0.01'),
+                      ),
+                    ]
+                    // Bono
+                    else if (_tipoSeleccionado == 'BONO') ...[
+                      _buildTextFormField(
+                        labelText: 'Monto invertido',
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (value) {
+                          if (value == null) return 'Monto debe ser > 0';
+                          final num = double.tryParse(value);
+                          return (num == null || num <= 0)
+                              ? 'Monto debe ser > 0'
+                              : null;
+                        },
+                        onSaved: (value) => _monto = double.parse(value ?? '0.01'),
+                      ),
+                      _buildTextFormField(
+                        labelText: 'Retorno anual (%)',
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (value) {
+                          if (value == null) return 'Retorno debe ser > 0';
+                          final num = double.tryParse(value);
+                          return (num == null || num <= 0)
+                              ? 'Retorno debe ser > 0'
+                              : null;
+                        },
+                        onSaved: (value) => _retornoAnual = double.parse(value ?? '0.01'),
+                      ),
+                      _buildTextFormField(
+                        labelText: 'Años restantes',
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null) return 'Años deben ser > 0';
+                          final parsed = int.tryParse(value);
+                          return (parsed == null || parsed <= 0)
+                              ? 'Años deben ser > 0'
+                              : null;
+                        },
+                        onSaved: (value) => _aniosRestantes = int.parse(value ?? '1'),
+                      ),
+                    ]
+                    // Fondo
+                    else if (_tipoSeleccionado == 'FONDO') ...[
+                        _buildTextFormField(
+                          labelText: 'Monto invertido',
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          validator: (value) {
+                            if (value == null) return 'Monto debe ser > 0';
+                            final num = double.tryParse(value);
+                            return (num == null || num <= 0)
+                                ? 'Monto debe ser > 0'
+                                : null;
+                          },
+                          onSaved: (value) => _monto = double.parse(value ?? '0.01'),
+                        ),
+                        _buildTextFormField(
+                          labelText: 'Tipo de fondo',
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Ingrese el tipo de fondo';
+                            }
+                            return null;
+                          },
+                          onSaved: (value) => _tipoFondo = value?.trim() ?? 'Indexado',
+                        ),
+                        _buildTextFormField(
+                          labelText: 'Rendimiento anual (%)',
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          validator: (value) {
+                            if (value == null) return 'Rendimiento no puede ser negativo';
+                            final num = double.tryParse(value);
+                            return (num == null || num < 0)
+                                ? 'Rendimiento no puede ser negativo'
+                                : null;
+                          },
+                          onSaved: (value) => _rendimientoAnual = double.parse(value ?? '0'),
+                        ),
+                      ],
+
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _guardar,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.tealAccent[700],
+                          minimumSize: const Size(double.infinity, 48),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: Text(
+                          'Guardar Inversión',
+                          style: GoogleFonts.pixelifySans(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextFormField({
+    required String labelText,
+    TextInputType? keyboardType,
+    required String? Function(String?)? validator,
+    required void Function(String?)? onSaved,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: TextFormField(
+        decoration: InputDecoration(
+          labelText: labelText,
+          labelStyle: GoogleFonts.pixelifySans(color: Colors.teal[900]),
+          border: const OutlineInputBorder(),
+        ),
+        style: GoogleFonts.pixelifySans(color: Colors.teal[900]),
+        keyboardType: keyboardType,
+        validator: validator,
+        onSaved: onSaved,
       ),
     );
   }

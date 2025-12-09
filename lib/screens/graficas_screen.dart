@@ -1,15 +1,21 @@
+// lib/screens/graficas_screen.dart
 
-import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
-import '../services/api_service.dart';
-import '../models/inversion.dart';
+
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../models/bono.dart';
 import '../models/fondo.dart';
+import '../models/inversion.dart';
+import '../services/api_service.dart';
 
 class GraficasScreen extends StatefulWidget {
+  const GraficasScreen({super.key});
+
   @override
-  _GraficasScreenState createState() => _GraficasScreenState();
+  State<GraficasScreen> createState() => _GraficasScreenState();
 }
 
 class _GraficasScreenState extends State<GraficasScreen> {
@@ -25,19 +31,27 @@ class _GraficasScreenState extends State<GraficasScreen> {
   Future<void> _cargarInversiones() async {
     try {
       final inversiones = await ApiService().getInversiones();
+
+      if (!mounted) return;
+
       setState(() {
         _inversiones = inversiones;
         if (inversiones.isNotEmpty) {
           _inversionSeleccionada = inversiones[0].nombre;
+        } else {
+          _inversionSeleccionada = null;
         }
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al cargar')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al cargar inversiones')),
+      );
     }
   }
 
   List<FlSpot> _generarDatos(Inversion inv) {
-    final List<FlSpot> spots = [];
+    final List<FlSpot> spots = <FlSpot>[];
     for (int anio = 1; anio <= 10; anio++) {
       double valorFuturo;
       if (inv is Bono) {
@@ -45,7 +59,6 @@ class _GraficasScreenState extends State<GraficasScreen> {
       } else if (inv is Fondo) {
         valorFuturo = inv.monto * pow(1 + inv.rendimientoAnual / 100, anio);
       } else {
-        // Acción: valor constante
         valorFuturo = inv.monto;
       }
       spots.add(FlSpot(anio.toDouble(), valorFuturo));
@@ -55,65 +68,170 @@ class _GraficasScreenState extends State<GraficasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final inversionActual = _inversiones
-        .firstWhere((inv) => inv.nombre == _inversionSeleccionada, orElse: () => _inversiones.isNotEmpty ? _inversiones[0] : Inversion(tipo: 'N/A', nombre: 'N/A', monto: 0));
+    final inversionActual = _inversiones.isNotEmpty
+        ? _inversiones.firstWhere(
+          (inv) => inv.nombre == _inversionSeleccionada,
+      orElse: () => _inversiones[0],
+    )
+        : null;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Gráficas de Valor Futuro')),
-      body: Column(
-        children: [
-          // Selector de inversión
-          if (_inversiones.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: DropdownButtonFormField<String>(
-                value: _inversionSeleccionada,
-                items: _inversiones.map((inv) => DropdownMenuItem(
-                  value: inv.nombre,
-                  child: Text(inv.nombre),
-                )).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _inversionSeleccionada = value;
-                  });
-                },
-                decoration: InputDecoration(labelText: 'Selecciona una inversión'),
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('lib/assets/fondo.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: Padding(
+              padding: const EdgeInsets.only(top: 10.0),
+              child: Text(
+                'Gráficas',
+                style: GoogleFonts.pixelifySans(
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal[900],
+                  shadows: const [
+                    Shadow(
+                      offset: Offset(1, 1),
+                      blurRadius: 4,
+                      color: Colors.black54,
+                    ),
+                  ],
+                ),
               ),
             ),
-
-          // Gráfica
-          Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(show: true),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        return Text('${value.toInt()} años');
-                      },
-                    ),
+            centerTitle: true,
+            toolbarHeight: 90,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            foregroundColor: Colors.white,
+          ),
+          body: _inversiones.isEmpty
+              ? Center(
+            child: Text(
+              'No hay inversiones para mostrar',
+              style: GoogleFonts.pixelifySans(
+                fontSize: 18,
+                color: Colors.white,
+              ),
+            ),
+          )
+              : Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(18.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: true),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      labelText: 'Selecciona una inversión',
+                      labelStyle: GoogleFonts.pixelifySans(color: Colors.teal[900]),
+                      border: InputBorder.none,
+                    ),
+                    dropdownColor: Colors.white,
+                    style: GoogleFonts.pixelifySans(color: Colors.teal[900]),
+                    value: _inversionSeleccionada,
+                    items: _inversiones
+                        .map(
+                          (inv) => DropdownMenuItem<String>(
+                        value: inv.nombre,
+                        child: Text(
+                          inv.nombre,
+                          style: GoogleFonts.pixelifySans(color: Colors.teal[800]),
+                        ),
+                      ),
+                    )
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _inversionSeleccionada = value;
+                      });
+                    },
                   ),
                 ),
-                borderData: FlBorderData(show: true),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: _generarDatos(inversionActual),
-                    isCurved: true,
-                    color: Colors.blue,
-                    barWidth: 2,
-                    dotData: FlDotData(show: true),
-                  ),
-                ],
               ),
-            ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: LineChart(
+                        LineChartData(
+                          backgroundColor: Colors.transparent,
+                          gridData: FlGridData(show: true, drawVerticalLine: false),
+                          titlesData: FlTitlesData(
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                getTitlesWidget: (value, meta) {
+                                  return Text(
+                                    '${value.toInt()}',
+                                    style: GoogleFonts.pixelifySans(
+                                      color: Colors.teal[700],
+                                      fontSize: 12,
+                                    ),
+                                  );
+                                },
+                                reservedSize: 36,
+                              ),
+                            ),
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 50,
+                                getTitlesWidget: (value, meta) {
+                                  return Text(
+                                    '\$${value.toInt()}',
+                                    style: GoogleFonts.pixelifySans(
+                                      color: Colors.teal[700],
+                                      fontSize: 12,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          ),
+                          borderData: FlBorderData(show: false),
+                          lineBarsData: [
+                            LineChartBarData(
+                              spots: _generarDatos(inversionActual!),
+                              isCurved: true,
+                              color: Colors.teal[900],
+                              barWidth: 4,
+                              dotData: FlDotData(
+                                show: true,
+                                getDotPainter: (spot, percent, barData, index) =>
+                                    FlDotCirclePainter(color: Colors.teal[900]!, strokeWidth: 2),
+                              ),
+                              belowBarData: BarAreaData(show: true, color: Colors.teal[900]!.withOpacity(0.1)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
+

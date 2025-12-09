@@ -5,11 +5,11 @@ class Bono extends Inversion {
   final int aniosRestantes;
 
   Bono({
-    required String nombre,
-    required double monto,
+    required super.nombre,
+    required super.monto,
     required this.retornoAnual,
     required this.aniosRestantes,
-  }) : super(tipo: 'BONO', nombre: nombre, monto: monto);
+  }) : super(tipo: 'BONO');
 
   factory Bono.fromJson(Map<String, dynamic> json) {
     return Bono(

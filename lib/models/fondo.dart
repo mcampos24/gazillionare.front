@@ -5,11 +5,11 @@ class Fondo extends Inversion {
   final double rendimientoAnual;
 
   Fondo({
-    required String nombre,
-    required double monto,
+    required super.nombre,
+    required super.monto,
     required this.tipoFondo,
     required this.rendimientoAnual,
-  }) : super(tipo: 'FONDO', nombre: nombre, monto: monto);
+  }) : super(tipo: 'FONDO');
 
   factory Fondo.fromJson(Map<String, dynamic> json) {
     return Fondo(
